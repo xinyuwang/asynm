@@ -32,7 +32,7 @@ type Asynm interface {
 	OpenAsyncMission(data string, count int, expiration int64) (string, error)
 
 	// submit submission result
-	SubmitMissionResult(missionId string, start int64, data string, err error) error
+	SubmitMissionResult(missionId string, idx int, start int64, data string, err error) error
 
 	// return bool success
 	CloseAsyncMission(missionId string) (bool, error)
@@ -98,7 +98,7 @@ func (a *asynm) OpenAsyncMission(data string, count int, expiration int64) (stri
 }
 
 // submit submission result
-func (a *asynm) SubmitMissionResult(missionId string, start int64, data string, err error) error {
+func (a *asynm) SubmitMissionResult(missionId string, idx int, start int64, data string, err error) error {
 
 	return nil
 }
