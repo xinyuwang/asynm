@@ -2,6 +2,7 @@ package asynm
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -10,10 +11,12 @@ type MissionState int
 
 const (
 	// mission state
-	MissionOpened   MissionState = 1
-	MissionFinished MissionState = 2
-	MissionStopped  MissionState = 3
-	MissionNotExist MissionState = 4
+	MissionInit     MissionState = 1
+	MissionOpened   MissionState = 2
+	MissionFinished MissionState = 3
+	MissionStopped  MissionState = 4
+	MissionError    MissionState = 5
+	MissionNotExist MissionState = 6
 )
 
 type asynm struct {
@@ -60,11 +63,43 @@ func NewAsynm(conf *redis.UniversalOptions, opts ...Option) (Asynm, error) {
 
 // return mission id
 func (a *asynm) OpenAsyncMission(data string, count int, expiration int64) (string, error) {
+
+	uuid, err := GenerateUuid()
+	if err != nil {
+		return "", fmt.Errorf("GenerateUuid error: %w", err)
+	}
+
+	key := fmt.Sprintf("asynm-%s", uuid)
+
+	// init mission in hash
+	if err := a.client.HSet(key, "mission_state", MissionInit); err != nil {
+		return "", fmt.Errorf("Init mission error: %w", err)
+	}
+
+	// set key expire
+	if expiration == DefaultExpiration {
+		expiration = a.opt.expiration
+	}
+
+	if expiration != NoExpiration {
+		duration := time.Microsecond * time.Duration(expiration)
+		if err := a.client.Expire(key, duration); err != nil {
+			return "", fmt.Errorf("Init expiration error: %w", err)
+		}
+	}
+
+	// open mission
+	ts := time.Now().UnixMicro()
+	if err := a.client.HSet(key, "mission_state", MissionOpened, "count_all", count, "count_cur", 0, "create_time", ts, "finish_time", 0, "expire_time", expiration, "mission_data", data); err != nil {
+		return "", fmt.Errorf("Open mission error: %w", err)
+	}
+
 	return "", nil
 }
 
 // submit submission result
 func (a *asynm) SubmitMissionResult(missionId string, start int64, data string, err error) error {
+
 	return nil
 }
 
