@@ -3,9 +3,9 @@ Async Mission based on redis
 
 ### Redis Key Mission
 
-#### mis_{id} 存储任务结构映射（hash）
+#### asynm_{id} 存储任务结构映射（hash）
 
-submis_{no}, JSON<start, end, data, error>
+item_{no}, JSON<start, end, data, error>
 count_all 总任务（int）
 count_cur 已完成（int） （INCR key）
 create_time 创建时间

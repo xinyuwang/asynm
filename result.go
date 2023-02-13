@@ -1,5 +1,9 @@
 package asynm
 
+import (
+	"time"
+)
+
 type MissionResult interface {
 
 	// state of mission
@@ -38,10 +42,25 @@ func newMissionResult(client *redisClient, missionId string) MissionResult {
 
 // part of result
 type ResultItem struct {
-	Start    int64
-	End      int64
-	Data     string
-	ErrorMsg string
+	Start  int64
+	End    int64
+	Data   string
+	ErrMsg string
+}
+
+func newResultItem(start int64, data string, err error) *ResultItem {
+
+	ErrMsg := ""
+	if err != nil {
+		ErrMsg = err.Error()
+	}
+
+	return &ResultItem{
+		Start:  start,
+		End:    time.Now().UnixMicro(),
+		Data:   data,
+		ErrMsg: ErrMsg,
+	}
 }
 
 // state of mission
