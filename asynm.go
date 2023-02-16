@@ -18,7 +18,6 @@ const (
 	MissionFinished MissionState = "MissionFinished" // use max == cur instead
 	MissionStopped  MissionState = "MissionStopped"
 	MissionError    MissionState = "MissionError"
-	MissionNotExist MissionState = "MissionNotExist"
 )
 
 const (
@@ -179,5 +178,5 @@ func (a *asynm) CloseAsyncMission(missionId string) error {
 
 // return mission result
 func (a *asynm) GetMissionResult(missionId string) (MissionResult, error) {
-	return nil, nil
+	return newMissionResult(a.client, missionId)
 }

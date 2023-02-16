@@ -1,6 +1,9 @@
 package asynm
 
 import (
+	"encoding/json"
+	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -41,9 +44,99 @@ type missionResult struct {
 	arr        []*ResultItem
 }
 
-func newMissionResult(client *redisClient, missionId string) MissionResult {
-	return &missionResult{
+func newMissionResult(client *redisClient, missionId string) (MissionResult, error) {
+
+	key := fmt.Sprintf("asynm-%s", missionId)
+	m := client.HGetAll(key)
+
+	result := &missionResult{
 		missionId: missionId,
+		arr:       []*ResultItem{},
+	}
+
+	// count_all
+	var err error
+	if result.all, err = getMapInt(m, fieldCountAll); err != nil {
+		return nil, err
+	}
+
+	// count_cur
+	if result.cur, err = getMapInt(m, fieldCountCur); err != nil {
+		return nil, err
+	}
+
+	// state
+	if str, ok := m[fieldMissionState]; ok {
+		result.state = MissionState(str)
+	} else {
+		return nil, fmt.Errorf("Field %s not exist", fieldMissionState)
+	}
+
+	if result.all == result.cur {
+		result.state = MissionFinished
+	}
+
+	// time
+	if result.createTime, err = getMapInt64(m, fieldCreateTime); err != nil {
+		return nil, err
+	}
+
+	if result.finishTime, err = getMapInt64(m, fieldFinishTime); err != nil {
+		return nil, err
+	}
+
+	if result.expireTime, err = getMapInt64(m, fieldExpireTime); err != nil {
+		return nil, err
+	}
+
+	// data
+	for i := 0; i < result.cur; i++ {
+		if item, err := getMapResultItem(m, i); err != nil {
+			return nil, err
+		} else {
+
+			result.arr = append(result.arr, item)
+		}
+	}
+
+	return result, nil
+}
+
+func getMapInt(m map[string]string, k string) (int, error) {
+	if str, ok := m[k]; ok {
+		if ret, err := strconv.Atoi(str); err == nil {
+			return ret, nil
+		}
+		return 0, fmt.Errorf("Field %s is not a number", k)
+
+	} else {
+		return 0, fmt.Errorf("Field %s not exist", k)
+	}
+}
+
+func getMapInt64(m map[string]string, k string) (int64, error) {
+	if str, ok := m[k]; ok {
+		if ret, err := strconv.ParseInt(str, 10, 64); err == nil {
+			return ret, nil
+		}
+		return 0, fmt.Errorf("Field %s is not a number", k)
+
+	} else {
+		return 0, fmt.Errorf("Field %s not exist", k)
+	}
+}
+
+func getMapResultItem(m map[string]string, idx int) (*ResultItem, error) {
+	k := fmt.Sprintf("item_{%d}", idx)
+	if str, ok := m[k]; ok {
+		if item, err := parseResultItem(str); err != nil {
+			return nil, err
+		} else {
+			return item, nil
+		}
+
+	} else {
+		return nil, fmt.Errorf("Field item_%d not exist", idx)
 	}
 }
 
@@ -53,6 +146,16 @@ type ResultItem struct {
 	End    int64
 	Data   string
 	ErrMsg string
+}
+
+func parseResultItem(str string) (*ResultItem, error) {
+
+	item := &ResultItem{}
+	if err := json.Unmarshal([]byte(str), item); err != nil {
+		return nil, fmt.Errorf("json.Unmarshal ResultItem error: %w", err)
+	}
+
+	return item, nil
 }
 
 func newResultItem(start int64, data string, err error) *ResultItem {
