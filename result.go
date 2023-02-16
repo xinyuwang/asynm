@@ -7,36 +7,43 @@ import (
 type MissionResult interface {
 
 	// state of mission
-	GetState() (MissionState, error)
+	GetState() MissionState
 
 	// count_all, count_current
-	GetProgress() (int, int, error)
+	GetMax() int
+	GetCur() int
 
 	// expiration time of the mission
-	GetExpiration() (int64, error)
+	GetExpiration() int64
 
 	// array of result in JSON
-	GetResults() ([]*ResultItem, error)
+	GetResults() []*ResultItem
 
 	// get specific result by index, max as count_all
-	GetResult(int) (*ResultItem, error)
+	GetResult(int) *ResultItem
 
 	// missionId
 	GetId() string
 
 	// create time, finish time
-	GetTime() (int64, int64, error)
+	GetTime() (int64, int64)
 }
 
 type missionResult struct {
 	missionId string
-	r         *redisClient
+
+	state      MissionState
+	all        int
+	cur        int
+	createTime int64
+	finishTime int64
+	expireTime int64
+	arr        []*ResultItem
 }
 
 func newMissionResult(client *redisClient, missionId string) MissionResult {
 	return &missionResult{
 		missionId: missionId,
-		r:         client,
 	}
 }
 
@@ -64,28 +71,38 @@ func newResultItem(start int64, data string, err error) *ResultItem {
 }
 
 // state of mission
-func (m *missionResult) GetState() (MissionState, error) {
-	return MissionInit, nil
+func (m *missionResult) GetState() MissionState {
+	return MissionInit
 }
 
-// count_all, count_current
-func (m *missionResult) GetProgress() (int, int, error) {
-	return 0, 0, nil
+// count_all
+func (m *missionResult) GetMax() int {
+	return m.all
+}
+
+// count_current
+func (m *missionResult) GetCur() int {
+	return m.cur
 }
 
 // expiration time of the mission
-func (m *missionResult) GetExpiration() (int64, error) {
-	return 0, nil
+func (m *missionResult) GetExpiration() int64 {
+	return m.expireTime
 }
 
 // array of result in JSON
-func (m *missionResult) GetResults() ([]*ResultItem, error) {
-	return nil, nil
+func (m *missionResult) GetResults() []*ResultItem {
+	return m.arr
 }
 
 // get specific result by index, max as count_all
-func (m *missionResult) GetResult(idx int) (*ResultItem, error) {
-	return nil, nil
+func (m *missionResult) GetResult(idx int) *ResultItem {
+
+	if idx > 0 && idx < len(m.arr) {
+		return m.arr[idx]
+	}
+
+	return nil
 }
 
 // missionId
@@ -94,6 +111,6 @@ func (m *missionResult) GetId() string {
 }
 
 // create time, finish time
-func (m *missionResult) GetTime() (int64, int64, error) {
-	return 0, 0, nil
+func (m *missionResult) GetTime() (int64, int64) {
+	return m.createTime, m.finishTime
 }

@@ -41,6 +41,17 @@ func (r *redisClient) HGet(key string, field string) string {
 	return r.client.HGet(context.Background(), key, field).Val()
 }
 
+func (r *redisClient) HMGet(key string, field ...string) []string {
+
+	arr := r.client.HMGet(context.Background(), key, field...).Val()
+	res := []string{}
+	for _, v := range arr {
+		res = append(res, fmt.Sprintf("%s", v))
+	}
+
+	return res
+}
+
 func (r *redisClient) HGetAll(key string) map[string]string {
 	return r.client.HGetAll(context.Background(), key).Val()
 }

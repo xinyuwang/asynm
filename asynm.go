@@ -15,7 +15,7 @@ const (
 	// mission state
 	MissionInit     MissionState = "MissionInit"
 	MissionOpened   MissionState = "MissionOpened"
-	MissionFinished MissionState = "MissionFinished"
+	MissionFinished MissionState = "MissionFinished" // use max == cur instead
 	MissionStopped  MissionState = "MissionStopped"
 	MissionError    MissionState = "MissionError"
 	MissionNotExist MissionState = "MissionNotExist"
@@ -132,7 +132,7 @@ func (a *asynm) SubmitMissionResult(missionId string, idx int, start int64, data
 	}
 
 	if cur >= all {
-		return fmt.Errorf("Mission [%s] state incorrect: count_cur >= count_all", missionId)
+		return fmt.Errorf("Mission [%s] state incorrect: already finished", missionId)
 	}
 
 	// submit mission result item
@@ -159,6 +159,9 @@ func (a *asynm) SubmitMissionResult(missionId string, idx int, start int64, data
 		return fmt.Errorf("HIncrBy %s %s 1 error: %w", key, fieldCountCur, err)
 	}
 
+	// we won't update the state even if max equal to cur
+	// we only trust max==cur
+
 	return nil
 }
 
@@ -166,9 +169,9 @@ func (a *asynm) SubmitMissionResult(missionId string, idx int, start int64, data
 func (a *asynm) CloseAsyncMission(missionId string) error {
 
 	key := fmt.Sprintf("asynm-%s", missionId)
-	state := a.client.HGet(key, fieldMissionState)
-	if state == "" {
-		return fmt.Errorf("HGet %s %s error: empty value [%s]", key, fieldMissionState, state)
+
+	if err := a.client.HSet(key, fieldMissionState, MissionStopped); err != nil {
+		return fmt.Errorf("HSet %s %s error: [%s]", key, fieldMissionState, MissionStopped)
 	}
 
 	return nil
